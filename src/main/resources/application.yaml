@@ -1,0 +1,51 @@
+server:
+  port: 43000
+  tomcat:
+    threads:
+      max: 1000
+      min-spare: 50
+    max-connections: 81920
+  ssl:
+    enabled: false
+    key-store: classpath:ws_xmpp.jks
+    key-store-type: pkcs12
+    key-store-password: password
+    key-password: password
+    key-alias: ws_xmpp
+  shutdown: graceful
+
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      jedis:
+        pool:
+          ## 连接池最大连接数（使用负值表示没有限制）
+          max-active: -1
+          ##连接池最大阻塞等待时间（使用负值表示没有限制）
+          max-wait: 10s
+          ## 连接池中的最大空闲连接
+          max-idle: 100
+          ## 连接池中的最小空闲连接
+          min-idle: 5
+          time-between-eviction-runs: 30s
+      ## 连接超时时间（毫秒）
+      timeout: 5000
+  datasource:
+    url: jdbc:mysql://16.163.77.104:3306
+    username: root
+    password: root
+
+openfire:
+  port: 5222
+  host: 16.163.77.104
+  domain: feiwin.com
+  roomDomain: conference.feiwin.com
+  admin-username: admin
+  admin-password: root
+  user-password: Ciretose@206
+
+jjwt:
+  secret: Qr5mpWbe/p4MCJ2ieL+Nx2g+oCEktE00O9GkeyTGmwdQt5DtJ4Vpv9HI6TfKmv72LkTZFBWsbwOSqiki2g9ffA==
+

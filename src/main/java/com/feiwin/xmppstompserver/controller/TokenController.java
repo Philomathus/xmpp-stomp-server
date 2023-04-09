@@ -2,7 +2,7 @@ package com.feiwin.xmppstompserver.controller;
 
 import com.feiwin.xmppstompserver.constant.Constants;
 import com.feiwin.xmppstompserver.service.TokenService;
-import com.feiwin.xmppstompserver.dto.TokenAuth;
+import com.feiwin.xmppstompserver.model.TokenAuth;
 import io.jsonwebtoken.lang.Maps;
 import jakarta.annotation.Resource;
 import lombok.extern.log4j.Log4j2;

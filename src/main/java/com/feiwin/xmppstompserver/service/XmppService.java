@@ -1,12 +1,8 @@
 package com.feiwin.xmppstompserver.service;
 
-import com.feiwin.xmppstompserver.annotation.FieldName;
-import com.feiwin.xmppstompserver.dto.*;
 import com.feiwin.xmppstompserver.config.XmppProperties;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.chat2.Chat;
@@ -22,13 +18,10 @@ import org.jivesoftware.smackx.xdata.form.FillableForm;
 import org.jxmpp.jid.EntityBareJid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.jid.parts.Localpart;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
-import org.springframework.web.socket.WebSocketSession;
 
-import java.lang.reflect.Field;
-import java.util.Objects;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -103,64 +96,55 @@ public class XmppService {
         log.info("Account for user '{}' created.", username);
     }
 
-    public void joinRoom(XMPPTCPConnection connection, RoomAccess roomAccess) {
+    public void joinRoom(XMPPTCPConnection connection, String roomId, String username) {
         try {
-            EntityBareJid jid = JidCreate.entityBareFrom(roomAccess.getRoomId() + "@" + xmppProperties.getRoomDomain());
+            EntityBareJid jid = JidCreate.entityBareFrom(roomId + "@" + xmppProperties.getRoomDomain());
             MultiUserChatManager multiUserChatManager = MultiUserChatManager.getInstanceFor(connection);
             multiUserChatManager.getRoomInfo(jid);
             MultiUserChat multiUserChat = multiUserChatManager.getMultiUserChat(jid);
             multiUserChat.join(connection.getUser().getResourcepart());
 
-            multiUserChat.addMessageListener( message -> publishingService.sendRoomMessage(message, roomAccess.getUsername()) );
+            multiUserChat.addMessageListener( message -> publishingService.sendRoomMessage(message, username) );
         } catch (Exception e) {
-            throw new RuntimeException("Something went wrong joining the room: " + roomAccess.getRoomId());
+            throw new RuntimeException("Something went wrong joining the room: " + roomId);
         }
     }
 
-    public void createRoom(XMPPTCPConnection connection, RoomCreation roomCreation) {
+    public void createRoom(XMPPTCPConnection connection, String roomId, String owner, Map<String, String> settings) {
 
         try {
             MultiUserChat multiUserChat = MultiUserChatManager.getInstanceFor(connection)
-                    .getMultiUserChat(JidCreate.entityBareFrom(roomCreation.getRoomId() + "@" + xmppProperties.getRoomDomain()));
+                    .getMultiUserChat(JidCreate.entityBareFrom(roomId + "@" + xmppProperties.getRoomDomain()));
             multiUserChat.create(connection.getUser().getResourcepart());
 
             FillableForm form = multiUserChat.getConfigurationForm().getFillableForm();
-
-            for(Field field : RoomSettings.class.getDeclaredFields()) {
-                FieldName fieldNameAnnotation = field.getAnnotation(FieldName.class);
-
-                if(fieldNameAnnotation != null) {
-                    field.setAccessible(true);
-                    form.setAnswer(fieldNameAnnotation.value(), Objects.toString(field.get(roomCreation.getRoomSettings()), null));
-                }
-            }
-
+            settings.forEach(form::setAnswer);
             multiUserChat.sendConfigurationForm(form);
-            multiUserChat.addMessageListener( message -> publishingService.sendRoomMessage(message, roomCreation.getOwner()) );
+            multiUserChat.addMessageListener( message -> publishingService.sendRoomMessage(message, owner) );
         } catch (Exception e) {
-            throw new RuntimeException("Something went wrong creating the room: " + roomCreation.getRoomId());
+            throw new RuntimeException("Something went wrong creating the room: " + roomId);
         }
     }
 
-    public void sendMessage(XMPPTCPConnection connection, PrivateMessage privateMessage) {
+    public void sendPrivateMessage(XMPPTCPConnection connection, String content, String to) {
         ChatManager chatManager = ChatManager.getInstanceFor(connection);
         try {
-            Chat chat = chatManager.chatWith(JidCreate.entityBareFrom(privateMessage.getTo() + "@" + xmppProperties.getDomain()));
-            chat.send(privateMessage.getContent());
-            log.info("Message sent to user '{}' from user '{}'.", privateMessage.getTo(), connection.getUser());
+            Chat chat = chatManager.chatWith(JidCreate.entityBareFrom(to + "@" + xmppProperties.getDomain()));
+            chat.send(content);
+            log.info("Message sent to user '{}' from user '{}'.", to, connection.getUser());
         } catch (Exception e) {
-            throw new RuntimeException("Something went wrong sending a message to: " + privateMessage.getTo());
+            throw new RuntimeException("Something went wrong sending a message to: " + to);
         }
     }
 
-    public void sendRoomMessage(XMPPTCPConnection connection, RoomMessage roomMessage) {
+    public void sendRoomMessage(XMPPTCPConnection connection, String roomId, String content) {
         try {
-            EntityBareJid groupJid = JidCreate.entityBareFrom(roomMessage.getRoomId() + "@" + xmppProperties.getRoomDomain());
+            EntityBareJid groupJid = JidCreate.entityBareFrom(roomId + "@" + xmppProperties.getRoomDomain());
             MultiUserChat multiUserChat = MultiUserChatManager.getInstanceFor(connection)
                     .getMultiUserChat(groupJid);
-            multiUserChat.sendMessage(connection.getUser().getLocalpart() + ":" + roomMessage.getFrom());
+            multiUserChat.sendMessage(connection.getUser().getLocalpart() + ":" + content);
         } catch (Exception e) {
-            throw new RuntimeException("Something went wrong sending a message to the room: " + roomMessage.getRoomId());
+            throw new RuntimeException("Something went wrong sending a message to the room: " + roomId);
         }
     }
 
@@ -209,5 +193,11 @@ public class XmppService {
             log.error("XMPP error.", e);
             throw new RuntimeException(connection.getUser().toString(), e);
         }
+    }
+
+    public void addIncomingMessageListener(XMPPTCPConnection connection) {
+        ChatManager chatManager = ChatManager.getInstanceFor(connection);
+        chatManager.addIncomingListener((from, message, chat) -> publishingService.sendPrivateMessage(message));
+        log.info("Incoming message listener for user '{}' added.", connection.getUser());
     }
 }

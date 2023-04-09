@@ -8,14 +8,15 @@ import java.util.Map;
 
 public class Constants {
 
+    /**
+     * Principal.name -> XMPPTCPConnection
+     */
     public static final Map<String, XMPPTCPConnection> CONNECTIONS = new HashMap<>();
 
-    public final static String MEMBER_ID          = "memberId";
+    public final static String MEMBER_ID = "memberId";
 
-    public final static String USERNAME           = "username";
+    public final static String USERNAME = "username";
 
-    public static final String WEBSOCKET_PROTOCOL = "Sec-WebSocket-Protocol";
-
-    public static final String USER_JJWT_KEY      = "im:user:jjwt:";
+    public static final String USER_JJWT_KEY = "im:user:jjwt:";
 
 }

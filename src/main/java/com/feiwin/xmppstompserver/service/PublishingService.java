@@ -1,7 +1,7 @@
 package com.feiwin.xmppstompserver.service;
 
-import com.feiwin.xmppstompserver.dto.PrivateMessage;
-import com.feiwin.xmppstompserver.dto.RoomMessage;
+import com.feiwin.xmppstompserver.model.PrivateMessage;
+import com.feiwin.xmppstompserver.model.RoomMessage;
 import jakarta.annotation.Resource;
 import org.jivesoftware.smack.packet.Message;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -31,7 +31,7 @@ public class PublishingService {
                 RoomMessage.builder()
                         .content(content)
                         .roomId(roomId)
-                        .from(from)
+                        .username(from)
                         .build()
                 ,
                 "/topic/room/message",
@@ -59,7 +59,7 @@ public class PublishingService {
         sendPrivate(
                 PrivateMessage.builder()
                         .content(content)
-                        .from(from)
+                        .username(from)
                         .to(to)
                         .build()
                 ,
